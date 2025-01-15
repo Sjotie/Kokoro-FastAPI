@@ -67,6 +67,16 @@ async def create_speech(
 ):
     """OpenAI-compatible endpoint for text-to-speech"""
     try:
+        # Check if there's an existing espeak error
+        if req.app.state.espeak_error:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "Speech synthesis service unavailable",
+                    "message": "espeak error detected"
+                }
+            )
+
         # Process voice combination and validate
         voice_to_use = await process_voices(request.voice, tts_service)
 
@@ -126,7 +136,15 @@ async def create_speech(
                         "message": str(e)
                     }
                 )
-            raise  # Re-raise other exceptions
+            # Always return 503 for any audio generation errors
+            logger.error(f"Audio generation error: {str(e)}")
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "Speech synthesis error",
+                    "message": str(e)
+                }
+            )
 
     except ValueError as e:
         logger.error(f"Invalid request: {str(e)}")
