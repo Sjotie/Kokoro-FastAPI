@@ -1,10 +1,12 @@
 # Active Context
 
 ## Current Focus
-[Describe what's being worked on now]
+Critical reliability bug: Phonemization (eSpeak) fails after sustained usage
 
 ## Recent Changes
 - [List recent changes and updates]
 
 ## Next Steps
-[Outline immediate next steps and priorities]
+1. Reproduce the failure scenario
+2. Identify failure patterns
+3. Develop fix

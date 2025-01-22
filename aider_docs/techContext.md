@@ -1,10 +1,15 @@
 # Technical Context
 
 ## Technologies Used
-- [List programming languages, frameworks, tools]
+- Tiny Kokoro voice model
+- eSpeak for phonemization
+- CPU inference
+- Railway deployment platform
 
 ## Development Setup
 [Describe development environment requirements]
 
 ## Technical Constraints
-[List any technical limitations or requirements]
+- Must run reliably on Railway's CPU environment
+- No GPU acceleration
+- Strict memory limitations
