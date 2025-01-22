@@ -50,3 +50,4 @@ docker-compose*
 *.pt
 *.wav
 *.tar*
+.aider*
