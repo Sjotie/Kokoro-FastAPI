@@ -1,4 +1,6 @@
 import re
+import logging
+import psutil
 from abc import ABC, abstractmethod
 
 import phonemizer
@@ -24,8 +26,16 @@ class PhonemizerBackend(ABC):
 
 class EspeakBackend(PhonemizerBackend):
     """Espeak-based phonemizer implementation"""
-
-    def __init__(self, language: str):
+    
+    _instance = None
+    
+    def __new__(cls, language: str):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._setup(language)
+        return cls._instance
+        
+    def _setup(self, language: str):
         """Initialize espeak backend
 
         Args:
@@ -44,22 +54,35 @@ class EspeakBackend(PhonemizerBackend):
 
         Returns:
             Phonemized text
+            
+        Raises:
+            Exception: If phonemization fails, with detailed resource diagnostics
         """
-        # Phonemize text
-        ps = self.backend.phonemize([text])
-        ps = ps[0] if ps else ""
+        try:
+            # Phonemize text
+            ps = self.backend.phonemize([text])
+            ps = ps[0] if ps else ""
 
-        # Handle special cases
-        ps = ps.replace("kəkˈoːɹoʊ", "kˈoʊkəɹoʊ").replace("kəkˈɔːɹəʊ", "kˈəʊkəɹəʊ")
-        ps = ps.replace("ʲ", "j").replace("r", "ɹ").replace("x", "k").replace("ɬ", "l")
-        ps = re.sub(r"(?<=[a-zɹː])(?=hˈʌndɹɪd)", " ", ps)
-        ps = re.sub(r' z(?=[;:,.!?¡¿—…"«»"" ]|$)', "z", ps)
+            # Handle special cases
+            ps = ps.replace("kəkˈoːɹoʊ", "kˈoʊkəɹoʊ").replace("kəkˈɔːɹəʊ", "kˈəʊkəɹəʊ")
+            ps = ps.replace("ʲ", "j").replace("r", "ɹ").replace("x", "k").replace("ɬ", "l")
+            ps = re.sub(r"(?<=[a-zɹː])(?=hˈʌndɹɪd)", " ", ps)
+            ps = re.sub(r' z(?=[;:,.!?¡¿—…"«»"" ]|$)', "z", ps)
 
-        # Language-specific rules
-        if self.language == "en-us":
-            ps = re.sub(r"(?<=nˈaɪn)ti(?!ː)", "di", ps)
+            # Language-specific rules
+            if self.language == "en-us":
+                ps = re.sub(r"(?<=nˈaɪn)ti(?!ː)", "di", ps)
 
-        return ps.strip()
+            return ps.strip()
+        except Exception as e:
+            current_process = psutil.Process()
+            logging.error(
+                f"ESPEAK ERROR DIAGNOSTICS:\n"
+                f"Open files: {current_process.open_files()}\n"
+                f"Memory: {current_process.memory_info().rss/1024/1024}MB\n"
+                f"Subprocesses: {current_process.children(recursive=True)}"
+            )
+            raise
 
 
 def create_phonemizer(language: str = "a") -> PhonemizerBackend:
@@ -71,6 +94,15 @@ def create_phonemizer(language: str = "a") -> PhonemizerBackend:
     Returns:
         Phonemizer backend instance
     """
+    # Add periodic reset every 50 requests
+    if not hasattr(create_phonemizer, "counter"):
+        create_phonemizer.counter = 0
+    create_phonemizer.counter += 1
+    
+    if create_phonemizer.counter % 50 == 0:
+        if EspeakBackend._instance:
+            EspeakBackend._instance.backend = None  # Force cleanup
+            EspeakBackend._instance = None
     # Map language codes to espeak language codes
     lang_map = {"a": "en-us", "b": "en-gb"}
 
