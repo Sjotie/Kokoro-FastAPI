@@ -59,19 +59,19 @@ class EspeakBackend(PhonemizerBackend):
             Exception: If phonemization fails, with detailed resource diagnostics
         """
         try:
-        # Phonemize text
-        ps = self.backend.phonemize([text])
-        ps = ps[0] if ps else ""
+            # Phonemize text
+            ps = self.backend.phonemize([text])
+            ps = ps[0] if ps else ""
 
-        # Handle special cases
-        ps = ps.replace("kəkˈoːɹoʊ", "kˈoʊkəɹoʊ").replace("kəkˈɔːɹəʊ", "kˈəʊkəɹəʊ")
-        ps = ps.replace("ʲ", "j").replace("r", "ɹ").replace("x", "k").replace("ɬ", "l")
-        ps = re.sub(r"(?<=[a-zɹː])(?=hˈʌndɹɪd)", " ", ps)
-        ps = re.sub(r' z(?=[;:,.!?¡¿—…"«»"" ]|$)', "z", ps)
+            # Handle special cases
+            ps = ps.replace("kəkˈoːɹoʊ", "kˈoʊkəɹoʊ").replace("kəkˈɔːɹəʊ", "kˈəʊkəɹəʊ")
+            ps = ps.replace("ʲ", "j").replace("r", "ɹ").replace("x", "k").replace("ɬ", "l")
+            ps = re.sub(r"(?<=[a-zɹː])(?=hˈʌndɹɪd)", " ", ps)
+            ps = re.sub(r' z(?=[;:,.!?¡¿—…"«»"" ]|$)', "z", ps)
 
-        # Language-specific rules
-        if self.language == "en-us":
-            ps = re.sub(r"(?<=nˈaɪn)ti(?!ː)", "di", ps)
+            # Language-specific rules
+            if self.language == "en-us":
+                ps = re.sub(r"(?<=nˈaɪn)ti(?!ː)", "di", ps)
 
             return ps.strip()
         except Exception as e:
