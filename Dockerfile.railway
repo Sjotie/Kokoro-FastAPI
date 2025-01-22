@@ -1,9 +1,6 @@
 FROM python:3.10-slim
 
-# 1. Declare ARG so we can use RAILWAY_SERVICE_ID at build time
-ARG RAILWAY_SERVICE_ID
-
-# 2. Install system dependencies
+# 1. Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     espeak-ng \
     git \
@@ -13,48 +10,47 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. Copy uv from prebuilt image
+# 2. Copy uv from prebuilt image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# 4. Create a non-root user
+# 3. Create a non-root user
 RUN useradd -m -u 1000 appuser
 
-# 5. Create directories & fix permissions
+# 4. Create directories & fix permissions
 RUN mkdir -p /app/models && \
     mkdir -p /app/api/src/voices && \
     chown -R appuser:appuser /app
 
 USER appuser
 
-# 6. Download and extract the Kokoro-82M model
+# 5. Download and extract the Kokoro-82M model
 WORKDIR /app/models
 RUN set -x && \
     curl -L -o model.tar.gz https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.0.1/kokoro-82m-onnx.tar.gz && \
     tar xzf model.tar.gz && \
     rm model.tar.gz
 
-# 7. Download and extract voice models
+# 6. Download and extract voice models
 WORKDIR /app/api/src/voices
 RUN curl -L -o voices.tar.gz https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.0.1/voice-models.tar.gz && \
     tar xzf voices.tar.gz && \
     rm voices.tar.gz
 
-# 8. Switch back to /app
+# 7. Switch back to /app
 WORKDIR /app
 
-# 9. Copy dependency files
+# 8. Copy dependency files
 COPY --chown=appuser:appuser pyproject.toml ./pyproject.toml
 
-# 10. Install dependencies with UV, using cache mounts
-RUN --mount=type=cache,id=s/${RAILWAY_SERVICE_ID}-/root/.cache/uv,target=/root/.cache/uv \
-    uv venv && \
+# 9. Install dependencies with UV (no cache)
+RUN uv venv && \
     uv sync --extra cpu --no-install-project
 
-# 11. Copy project files
+# 10. Copy project files
 COPY --chown=appuser:appuser api ./api
 
-RUN --mount=type=cache,id=s/${RAILWAY_SERVICE_ID}-/root/.cache/uv,target=/root/.cache/uv \
-    uv sync --extra cpu
+# 11. Final sync step (no cache)
+RUN uv sync --extra cpu
 
 # 12. Environment variables
 ENV PYTHONUNBUFFERED=1
